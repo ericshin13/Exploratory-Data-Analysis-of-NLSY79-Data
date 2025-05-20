@@ -1,0 +1,447 @@
+---
+title: "Final Project Part B"
+subtitle: "East"
+author: "Erich Haley, Nichole Hernandez, Eric Shin"
+date: last-modified
+format:
+  html:
+    editor: visual
+    df-print: paged
+    embed-resources: true
+---
+
+```{r}
+#| echo: false
+#| output: false
+load("education_data_nlsy79.RDAta")
+load("income_data_nlsy79.RDAta")
+load("physical_data_nlsy79.RDAta")
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(ggplot2)
+```
+
+## Goals
+
+-   Identify several questions of interest concerning the effect of physical characteristics and education on income.
+
+-   Perform EDA targeted to those questions.
+
+-   Summarize your findings based on your supporting plots and data analysis.
+
+There are education levels that are greater than 20. I am updating these values to NA as they are erroneous.
+
+```{r}
+# Lets begin by joinning our Education and Physcial data frames
+
+edu_phys = education_data_nlsy79 |>
+  inner_join(physical_data_nlsy79) |>
+  #Setting Education values over 20 to NA.
+  mutate(education = ifelse(education > 20, NA, education)) |>
+  group_by(CASEID) |>
+  mutate(max_education = max(education, na.rm = TRUE)) |>
+  ungroup() |>
+  mutate(education_level = case_when(
+    #Creating groupings of our Education levels for easier plotting.
+    max_education >= 18 ~ "Masters Graduate",
+    max_education >= 16 ~ "College Graduate",
+    max_education >= 12 ~ "High School Graduate",
+    max_education < 12 ~ "Less than High School",
+    TRUE ~ NA_character_
+  )) |>
+  mutate(education_level = factor(education_level, 
+                                  levels = c("Less than High School",
+                                             "High School Graduate", 
+                                             "College Graduate",
+                                             "Masters Graduate"))) |>
+  #Filtering our data so we only include 2014 data. 
+  filter(year == 2014)
+
+  
+#Lets remove ny NA vlaues and filter to only include data from 2014.
+income_2014 = income_data_nlsy79 |>
+  filter(year == 2014) |>
+  filter(!is.na(income)) |>
+  unique()
+
+#Joining our Income and edu_phys data frames.
+edu_phys_income_2014 = edu_phys |>
+  inner_join(income_2014) |>
+  filter(year == 2014) |>
+  filter(!is.na(income))|>
+  unique()
+
+
+
+#Lets create variations of our ed_phys_income_2014 data frame looking only at our high income earners and our data without them.
+less_high_income = edu_phys_income_2014 |>
+  filter(income < 300000)
+
+
+
+max_income = edu_phys_income_2014 |>
+  filter(income > 300000)
+
+#Finding our mean income for our entire data set based on gender.
+mean_income = edu_phys_income_2014 |>
+  group_by(sex)|>
+  summarise(mean_gender_income = mean(income, na.rm = TRUE))
+
+#Finding our mean income for our data set without the high earners based on gender.
+less_high_income |>
+  group_by(sex) |>
+       summarise(mean_less_high_income = mean(income, na.rm = TRUE))
+
+edu_income_average <- edu_phys_income_2014 %>%
+  group_by(education_level) %>%
+  summarise(average_income = mean(income, na.rm = TRUE)) #Grouping the edu_phys_income_2014 data by education level and calculating the average income for each education level group, storing results into a summary table, edu_income_average
+
+less_high_income <- edu_phys_income_2014 %>%
+  filter(income < 300000) #Filtering the edu_phys_income_2014 data to include only rows where the income is less than $300,000, storing results into a new data set, less_high_income
+
+less_high_income2 <- less_high_income %>%
+  group_by(education_level) %>%
+  summarise(average_income = mean(income, na.rm = TRUE)) #Grouping the less_high_income data by education level and calculating the average income for each education level group, storing results into a new data set, less_high_income2
+```
+
+# **Exploring the Affects of Education Level on Income During 2014**
+
+## **Visualizing Average Income by Education Level**
+
+```{r}
+ggplot(data = na.omit(edu_income_average), aes(x = education_level, y = average_income)) +
+  geom_col(fill = "forestgreen") +
+  labs(title = "Average Income by Education Level During 2014", x = "Education Level", y = "Income") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar) 
+```
+
+The bar graph shows that individuals with higher levels of education tend to earn more on average, for example, people with a college degree or a master's degree are expected to have taller bars (higher average income) compared to those with only a high school education or less
+
+There is a substantial jump in income from "High School Graduate" to "College Graduate"
+
+The bar graph ultimately shows that higher education levels correlate with higher average incomes in 2014, it shows the economic advantage of attaining higher educational degrees, with the tallest bars representing the highest average income for those with advanced degrees
+
+## **Visualizing Average Income by Education Level (Excluding Outliers)**
+
+```{r}
+ggplot(data = na.omit(less_high_income2), aes(x = education_level, y = average_income)) +
+  geom_col(fill = "forestgreen") +
+  labs(title = "Average Income by Education Level During 2014 (Excluding Outliers)", x = "Education Level", y = "Income") +
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal() 
+```
+
+The bar graph still shows that individuals with higher levels of education tend to earn more on average, for example, people with a college degree or a master’s degree are expected to have taller bars (higher average income) compared to those with only a high school education or less.
+
+There is a substantial jump in income from “High School Graduate” to “College Graduate.”
+
+The bar graph ultimately shows that higher education levels correlate with higher average incomes in 2014, with the tallest bars representing the highest average income for those with advanced degrees.
+
+## **Visualizing Distribution of Income by Education Level**
+
+```{r}
+ggplot(data = na.omit(edu_phys_income_2014), aes(x = education_level, y = income)) + 
+  geom_boxplot(color = "forestgreen") +
+  labs(title = "Income Distribution by Education Level During 2014", x = "Education Level", y = "Income") +
+  theme_minimal()+
+  scale_y_continuous(labels = scales::dollar) 
+```
+
+The box plot shows that individuals with higher education levels have higher median incomes than those with lower education levels.
+
+The box and whiskers show a wider range of distributions because of the very high income values at the top of the graph, regardless of education level, the highest income that an individual had in the data was \$370,314.
+
+There is some degree of income inequality because the box and whiskers for College Graduates and Masters Graduates are wider compared to the box and whiskers for High School Graduates and lower education levels.
+
+## **Visualizing Distribution of Income by Education Level (Excluding Outliers)**
+
+```{r}
+ggplot(data = na.omit(less_high_income), aes(x = education_level, y = income)) + 
+  geom_boxplot(color = "forestgreen") +
+  labs(title = "Income Distribution by Education Level During 2014 (Excluding Outliers)", x = "Education Level", y = "Income") +
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal()
+```
+
+The box plot still shows that individuals with higher education levels have higher median incomes than those with lower education levels.
+
+The box and whiskers still show a wide range of distributions, but a smaller range compared to the box and whiskers with the extreme values of \$370,314.
+
+There is still some degree of income inequality because the box and whiskers for College Graduates and Masters Graduates are wider compared to the box and whiskers for High School Graduates and lower education levels.
+
+## **Summarizing the Count, Proportion, Average Income, and Median Income by Education Level**
+
+```{r}
+summary_edu_income <- edu_phys_income_2014 %>%
+  group_by(education_level) %>%
+  summarise(
+    Count = n(),
+    Proportion = Count / nrow(edu_phys_income_2014),
+    Mean_Income = mean(income),
+    Median_Income = median(income),
+  ) 
+colnames(summary_edu_income) <- c("Education Level", "Count", "Proportion", "Average Income", "Median Income") 
+#| echo: false
+#| output: true
+summary_edu_income
+```
+
+The majority of people in the edu_phys_income_2014 data set are high school graduates, with a count of 4,190 people with this education level, making up 62% of the proportion of individuals in the data set.
+
+Masters Graduates have the highest average income in the data set, with an average income of \$89,448
+
+Masters Graduates also have the highest median income in the data set, with a median income of \$63,000.
+
+The summary table ultimately shows that higher education levels correlate with higher average incomes in 2014.
+
+## **Summarizing the Count, Proportion, Average Income, and Median Income by Education Level (Excluding Outliers)**
+
+```{r}
+summary_edu_income2 <- less_high_income %>%
+  group_by(education_level) %>%
+  summarise(
+    Count = n(),
+    Proportion = Count / nrow(less_high_income),
+    Mean_Income = mean(income),
+    Median_Income = median(income),
+  )
+colnames(summary_edu_income2) <- c("Education Level", "Count", "Proportion", "Average Income", "Median Income")
+#| echo: false
+#| output: true
+summary_edu_income2
+```
+
+Excluding the extreme values, the majority of people in the edu_phys_income_2014 data set are still high school graduates, with a count of 4,172 people with this education level, making up 63% of the proportion of individuals in the data set.
+
+Masters Graduates have the highest average income in the data set, with an average income of \$59,774.
+
+Masters Graduates also have the highest median income in the data set, with a median income of \$59,000.
+
+While excluding the extreme values, the summary table still ultimately shows that higher education levels correlate with higher average incomes in 2014.
+
+------------------------------------------------------------------------
+
+# **Exploring the Affects of Gender on Income During 2014**
+
+```{r}
+ggplot(data = edu_phys, aes(x = education_level, fill = sex)) +
+  geom_bar(position = "dodge") +
+  scale_x_discrete(
+    expand = expansion(mult = c(0.1, 0.1))
+  ) +
+  theme_minimal() +
+  labs(title = "Distribution of Education Between Genders", x = "Education Level", y = "Count")
+```
+
+Running the table above we can see the distribution of education levels between our male and female population. We can see that females have a slight edge over our male population as the education levels increase.
+
+Unsurprisingly, the majority of our population only have a high school education with the lowest population having a masters degree.
+
+## **Visualizing Income between Genders**
+
+```{r}
+ggplot(data = edu_phys_income_2014, aes(x = sex, y = income)) +
+  geom_boxplot(aes(fill = sex)) +
+  labs(title = "Income Distribution by Gender",
+       x = "Gender",
+       y = "Income") +
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal()
+```
+
+We decided to include the highest earners for this plot to see the distribution of incomer earners. The median income for both genders appears similar, indicating that the central tendency of income is comparable. However, the interquartile range (IQR), which represents the middle 50% of the data, is slightly higher for males, suggesting greater variability in male incomes. There are more outliers on the higher end for both genders, but males have a few extreme high-income outliers, which may indicate that some men earn significantly more than their peers. Overall, while the central tendency is similar, the spread and presence of outliers suggest some differences in income distribution between genders.
+
+```{r}
+ggplot(data = less_high_income, aes(x = sex, y = income)) +
+  geom_boxplot(aes(fill = sex)) +
+  labs(title = "Income Distribution by Gender",
+       x = "Gender",
+       y = "Income")+
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal()
+```
+
+The box plots illustrate the income distribution between men and women. Both plots show that the median income for men is higher than for women, indicating a gender income gap. The interquartile range (IQR) for men is also larger, suggesting greater variability in male incomes compared to female incomes. Additionally, there are more outliers in the male income distribution, particularly on the higher end, which may indicate that some men earn significantly more than their peers. Overall, the plots suggest that while both genders have similar lower income ranges, men tend to have higher incomes and more variability in earnings.
+
+```{r}
+ggplot(data = max_income, aes(x = education_level, fill = sex)) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  labs(x = "Education Level", y = "Count")
+```
+
+After seeing the graphs depicting the income between the genders we became interested in who are the high income earners. We created a data frame to only include those individuals to see what their education levels were. The bar graph illustrates that men have higher representation in higher education categories, particularly among college and master's graduates. In contrast, women have lower counts in these categories, indicating a potential disparity in educational attainment. This difference in education levels may contribute to the income differences observed in the box plots, where men generally have higher incomes and more variability compared to women. The graph suggests that educational attainment could be a factor influencing income disparities between genders.
+
+```{r}
+less_high_income |>
+  group_by(sex) |>
+       summarise(mean_less_high_income = mean(income, na.rm = TRUE))
+
+```
+
+------------------------------------------------------------------------
+
+# **Exploring the Affects of Race on Income During 2014**
+
+```{r}
+income_data_2014 <- income_data_nlsy79 |>
+  inner_join(physical_data_nlsy79, by = join_by(CASEID, year)) |>
+  filter(year == 2014) |>
+  mutate(income = ifelse(income > 500000, NA, income)) |>
+  filter(!is.na(income) & income > 0) |>  
+  group_by(CASEID) |>
+  mutate(max_income = max(income)) |>
+  ungroup() |>
+  mutate(income_level = case_when(
+    max_income >= 100000 ~ "High Income",
+    max_income >= 50000 ~ "Medium Income",
+    max_income >= 25000 ~ "Low Income",
+    max_income < 25000 ~ "Very Low Income"
+  )) |>
+  mutate(income_level = factor(income_level, 
+                               levels = c("Very Low Income",
+                                          "Low Income", 
+                                          "Medium Income",
+                                          "High Income")))
+print(income_data_2014)
+```
+
+# **Exploring the incomes of people during the year of 2014**
+
+This summary of the income tells us there's a wide range between the minimum (1) and maximum (370314) values. The mean (58293) is higher than the median (42000), suggesting a right-skewed distribution, likely due to some very high values.50% of the data falls between 23391 (1st quartile) and 70000 (3rd quartile).
+
+```{r}
+income_summary = summary(income_data_2014$income)
+
+print(income_summary)
+```
+
+```{r}
+income_data_2014 <- income_data_2014 |>
+  mutate(income_level = case_when(
+    income >= 100000 ~ "High Income",
+    income >= 50000 ~ "Medium Income",
+    income >= 25000 ~ "Low Income",
+    income < 25000 ~ "Very Low Income"
+  )) |>
+  mutate(income_level = factor(income_level, 
+                               levels = c("Very Low Income",
+                                          "Low Income", 
+                                          "Medium Income",
+                                          "High Income")))
+
+income_distribution <- table(income_data_2014$income_level)
+print(income_distribution)
+```
+
+## **Distribution of income in 2014**
+
+This histogram shows how income is distributed in 2014.Most of the population has lower income: The highest number of people (around 600–700) earn between \$0 and \$50,000.There’s a steep decline: As income increases, the number of people earning more decreases sharply, especially after the \$100,000 mark.A notable outlier or gap around \$400,000: There's a small, distinct spike near \$400,000, indicating a group with much higher incomes than the rest.
+
+```{r}
+p <- ggplot(income_data_2014, aes(x = income)) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black") +
+  scale_x_continuous(labels = scales::dollar_format(), limits = c(0, 500000)) +
+  labs(title = "Distribution of Income in 2014",
+       x = "Income", y = "Count") +
+  theme_minimal()
+
+print(p)
+```
+
+## **Average income by race**
+
+There is a noticeable income disparity among these racial/ethnic groups. The NBNH group earns, on average, significantly more than both Hispanic and Black groups.The order of average income from highest to lowest is NBNH, Hispanic, and Black.The difference in average income between the highest-earning group (NBNH) and the lowest-earning group (Black) is substantial, at \$24,058.61.
+
+```{r}
+avg_income_by_race <- income_data_2014 |>
+  group_by(race) |>
+  summarise(avg_income = mean(income, na.rm = TRUE)) |>
+  arrange(desc(avg_income))
+
+print(avg_income_by_race)
+```
+
+## **Correlation between income and other variables**
+
+This matrix shows the relationships between income, weight, height, and BMI in 2014. The strongest relationship is between weight and BMI, which is expected as BMI is calculated using weight. There's a moderate positive relationship between weight and height.Income has weak to very weak relationships with the physical characteristics, with the strongest being with height. BMI has a strong positive relationship with weight but very weak relationships with height and income.
+
+```{r}
+cor_matrix <- income_data_2014 |>
+  select(income, weight, height, BMI) |>
+  cor(use = "complete.obs")
+
+print(cor_matrix)
+```
+
+## **The following question has been constructed to analyze the income data.**
+
+**Q - How big of an impact does race have on the incomes of people during that year?**
+
+1.  The data reveals Non-Black Non-Hispanic (NBNH) individuals earning the highest average income at \$68,333.92, followed by Hispanics at \$50,706.64, and Black individuals at \$44,275.31.
+
+2.  The median income figures show NBNH individuals having a median income of \$48,000, compared to \$40,000 for Hispanics and \$35,000 for Black individuals. This indicates that the income gap persists even when considering the middle point of each group's income distribution.
+
+3.  These substantial differences in both average and median incomes across racial groups suggest that race has a considerable impact on income levels, with NBNH individuals earning on average about 54% more than Black individuals and about 35% more than Hispanic individuals during 2014
+
+    ```{r}
+    income_summary <- income_data_2014 |>
+      group_by(race) |>
+      summarize(avg_income = mean(income, na.rm = TRUE)) |>
+      arrange(desc(avg_income))
+
+    income_race_data_2014 <- income_data_nlsy79 |>
+      inner_join(physical_data_nlsy79, by = c("CASEID", "year")) |>
+      filter(year == 2014) |>
+      filter(!is.na(income) & income > 0) |>
+      filter(!is.na(race))
+
+    avg_income_by_race_2014 <- income_race_data_2014 |>
+      group_by(race) |>
+      summarise(
+        avg_income = mean(income, na.rm = TRUE),
+        median_income = median(income, na.rm = TRUE),
+        count = n()
+      ) |>
+      arrange(desc(avg_income))
+
+    print(avg_income_by_race_2014)
+
+    ggplot(income_race_data_2014, aes(x = race, y = income, fill = race)) +
+          geom_boxplot() +
+          scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 200000)) +
+          labs(title = "Income Distribution by Race in 2014",
+               x = "Race", y = "Income") +
+      theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    ```
+
+## **Summary of Income and Education Analysis**
+
+## **Education and Income**
+
+-   **Bar Graphs**: Individuals with higher education levels, such as college or master's degrees, tend to earn more. There's a noticeable income increase from high school to college graduates.
+
+-   **Box Plots**: Higher education levels correlate with higher median incomes. The income range is wider for those with advanced degrees, indicating income inequality.
+
+## **Gender and Income**
+
+-   **Bar Graphs**: Men have higher representation in higher education categories, especially among college and master's graduates. Women are less represented, suggesting disparities in educational attainment.
+
+-   **Box Plots**: Men generally have higher incomes and more variability compared to women, with more high-income outliers.
+
+## **Race and Income**
+
+-   **Income Distribution**: Non-Black Non-Hispanic (NBNH) individuals earn significantly more on average than Hispanic and Black individuals. The income gap is substantial, with NBNH individuals earning about 54% more than Black individuals.
+
+-   **Median Income**: Reflects similar disparities, with NBNH individuals having the highest median income.
+
+## **Correlations**
+
+-   **Income vs. Physical Characteristics**: Weak correlations between income and physical characteristics like height and BMI. The strongest relationship is between weight and BMI.
+
+## **Conclusion**
+
+The analysis reveals significant disparities in income based on education, gender, and race. Higher education levels generally lead to higher incomes, while gender and race also play substantial roles in determining economic outcomes. Educational attainment appears to be a key factor influencing these disparities.
