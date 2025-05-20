@@ -4,6 +4,7 @@ This project analyzed several questions of interest concerning the effect of phy
 ![Final Project Part B Graph 2](https://github.com/user-attachments/assets/2757790f-3994-4ff7-8154-8242e6b246d9)
 ![Final Project Part B Graph 3](https://github.com/user-attachments/assets/9f3c8fbf-584c-4d90-bebc-77388c2e50f1)
 ![Final Project Part B Graph 4](https://github.com/user-attachments/assets/3513458f-5152-4570-9097-7de77d59b26b)
+
+## Technology Used: R Programming Language
 ## Project Code is located in the qmd file
 ## Project Report is located in the html file (Download raw file)
-## Technology Used: R Programming Language
