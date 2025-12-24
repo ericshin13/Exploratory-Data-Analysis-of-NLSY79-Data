@@ -1,7 +1,7 @@
 # Exploratory Data Analysis of NLSY79 Data
 This project analyzed several questions of interest concerning the effect of physical characteristics and education on income in the NLSY79 survey through exploratory data analysis. The NLSY79 is a longitudinal project that follows the lives of a sample of young American men and women born during the years 1957 through 1964.
 
-*Group Collaborators: Erich Haley, Nicole Hernandez, Eric Shin*
+# Group Collaborators: Erich Haley, Nicole Hernandez, Eric Shin
 
 ![Final Project Part B Graph 1](https://github.com/user-attachments/assets/03b44564-3236-4837-af34-b61e48473e69)
 ![Final Project Part B Graph 2](https://github.com/user-attachments/assets/2757790f-3994-4ff7-8154-8242e6b246d9)
